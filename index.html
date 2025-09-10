@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<title>Colony Isles House</title>
+<!-- <link id="favicon" rel="icon" href="./m3-logo-2-green.png" type="image/png" sizes="16x16"> -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="apple-touch-icon" sizes="128x128" href="./favicon.ico">
+<script src="https://www.w3schools.com/lib/w3.js"></script>
+<style>
+    body {
+        background-color: #000000cf;
+        color: white;
+        padding: 2%;
+        /* font-family: cursive !important; */
+    }
+
+    body,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: Verdana;
+    }
+
+    @media (min-width: 993px) {
+        .w3-modal-content {
+            width: 90%;
+        }
+    }
+
+    .w3-card {
+        min-height: 100px;
+    }
+
+    img {
+        cursor: pointer;
+    }
+</style>
+
+<body class="">
+
+    <div class="w3-container" style="background-color:#003158;">
+        <h2>House<div class="w3-medium _w3-right">2025.09.10</div>
+        </h2>
+    </div>
+
+    <div id="tabs" class="w3-bar w3-black">
+    </div>
+
+    <div id="tab-property" class="w3-container city" style="">
+        <div id="output-drone" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+        <div id="output-plan" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+        <div id="output-render" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+        <div id="output-elevation" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+        <div id="output-gallery" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+        <div id="output-docs" class="w3-row" _style="display:flex;flex-wrap:wrap;justify-content:flex-start;">
+        </div>
+    </div>
+
+</body>
+
+<script>
+
+    let config = {};
+
+    async function create_config() {
+        return new Promise((resolve) => {
+            let folders = [];
+            let filenames = [];
+            fetch('./images/')
+                .then((v) => { return v.text(); })
+                .then((v) => {
+                    filenames = v.split('</head>')[1]
+                        .split('\n')
+                        .filter((v2) => v2.indexOf('<li>') === 0)
+                        .map((v2) => v2.replace('<li><a href="', '.'))
+                        .map((v2) => v2.substr(0, v2.indexOf('"')));
+                    folders = filenames.filter((v2) => !v2.endsWith('png'));
+                    // filenames = filenames.filter((v2) => v2.endsWith('png'));
+                    // console.log(folders, filenames);
+
+                    // /** add the tabs */
+                    folders.forEach((folder, i) => {
+                        if (folder.indexOf('./images/_') !== 0) {
+                            config[folder] = [];
+
+                            fetch(folder)
+                                .then((v) => { return v.text(); })
+                                .then((v) => {
+                                    filenames = v.split('</head>')[1]
+                                        .split('\n')
+                                        .filter((v2) => v2.indexOf('<li>') === 0)
+                                        .map((v2) => v2.replace('<li><a href="', '.'))
+                                        .map((v2) => v2.substr(0, v2.indexOf('"')));
+                                    filenames = filenames.filter((v2) => v2.endsWith('png'));
+
+                                    // /** add the filenames to the folder */
+                                    filenames.forEach((filename) => {
+                                        config[folder].push(filename);
+                                    });
+                                    if (i === folders.length - 1) {
+                                        resolve();
+                                    }
+                                });
+                        }
+                    })
+                });
+        })
+    };
+    function processConfiguration() {
+        // /** create tab buttons and load the first page */
+        let html_tabs = ``;
+        Object.keys(config).forEach((k, i) => {
+            if (k.indexOf('_') !== 0) {
+                let folder = k.replace('./images/', '').replace('%20', ' ');
+                const text = folder.substring(2);
+                let style = 'border-right:0.5px solid #505050;min-width:100px;'
+                style += i === 0 ? 'border-bottom:7px solid #0467b6;' : 'border-bottom:7px solid black';
+                let html = `<button id="btn-tab-${folder}" class="w3-bar-item w3-button" style="${style}"
+                    onclick="openTab('${folder}')">${text}</button>`;
+                html_tabs += html;
+            }
+        });
+        document.getElementById('tabs').innerHTML = html_tabs;
+        loadImages('./images/0-Info');
+    }
+    let querystring = window.location.search.substring(1);
+    const generate = querystring.toLowerCase() === 'generate=true';
+    console.log(generate, querystring);
+    if (generate) {
+        /** local hosting allows reading the file list from  server */
+        create_config().then(() => {
+            console.table('===== CONFIGURATION =====', config);
+            processConfiguration();
+        });
+    } else {
+        fetch('./config.json')
+            .then((v) => { return v.text(); })
+            .then(async (v) => {
+                config = JSON.parse(v);
+                // console.log(config);
+                processConfiguration();
+            });
+    }
+
+    const replaceAll = (text, search, replace) => {
+        while (text.indexOf(search) >= 0) {
+            text = text.replace(search, replace);
+        }
+        return text;
+    }
+
+    function loadImages(folder) {
+        console.log(folder);
+        const filenames = config[replaceAll(folder, ' ', '%20')];
+
+        fetch('./card-2.html')
+            .then((v) => { return v.text(); })
+            .then((v) => {
+                let html = '';
+                const dict = {
+                    '-drone': 'Overview',
+                    '-plan': 'Floor Plan',
+                    '-render': 'Floor Renderings',
+                    '-gallery': 'Gallery',
+                    '-elevation': 'Elevation Views',
+                };
+                ['-drone', '-plan', '-render', '-gallery', '-elevation'].forEach((filter) => {
+                    html = '';
+                    filenames.filter((f) => f.indexOf(filter) >= 0)
+                        .forEach((filename, i) => {
+                            html += (i === 0) ? `<h6 style="border-bottom: 1px solid;width100%;">${dict[filter]}</h6>
+                                        <div class="w3-row-padding w3-margin-top">` : ``;
+                            const split = filename.split('/');
+                            // let name = filename.replace('./images/', '');
+                            let name = split[3]
+                            name = name.replace('.png', '');
+                            name = replaceAll(name, '%20', ' ');
+                            name = name.replace(filter, '');
+                            name = name.substring(2);
+                            let temp = replaceAll(v, '{{url}}', filename);
+                            temp = temp.replaceAll('{{name}}', name);
+                            html += temp;
+                        });
+                    html += '</div>';
+                    document.getElementById(`output${filter}`).innerHTML = html;
+                })
+            });
+    }
+
+    function openTab(name) {
+        var i;
+        var x = document.getElementsByClassName("w3-bar-item");
+        for (i = 0; i < x.length; i++) {
+            x[i].style.borderBottom = '';
+        }
+        document.getElementById('tab-property').style.display = "none";
+        document.getElementById('tab-property').style.display = "block";
+        document.getElementById('btn-tab-' + name).style.borderBottom = '7px solid #0467b6';
+
+        // /** load images */
+        loadImages(`./images/${name}`);
+    }
+
+</script>
+
+</html>
